@@ -23,66 +23,90 @@ import subprocess
 import logging
 import time
 
+def kill_daemons(daemons, signal, restart_after):
+  """Kill the given daemons with the given signal, then
+  restart them after the given number of seconds.
 
-def kill_daemon(daemon, signal, restart_after):
-  """Kill the given daemon with the given signal, then
-  restart it after the given number of seconds.
-
-  @param daemon: the name of the daemon (eg HRegionServer)
+  @param daemons: the names of the daemon (eg HRegionServer)
   @param signal: signal to kill with
   @param restart_after: number of seconds to sleep before restarting
   """
   def do():
-    pid = procutils.find_jvm(daemon)
-    if pid:
-      logging.info("Killing %s pid %d with signal %d" % (daemon, pid, signal))
-      os.kill(pid, signal)
-      logging.info("Sleeping for %d seconds" % restart_after)
-      time.sleep(restart_after)
-    else:
-      logging.info("There was no %s running!" % daemon)
-    logging.info("Restarting %s" % daemon);
-    procutils.start_daemon(daemon)
+    # First kill
+    for daemon in daemons:
+      pid = procutils.find_jvm(daemon)
+      if pid:
+        logging.info("Killing %s pid %d with signal %d" % (daemon, pid, signal))
+        os.kill(pid, signal)
+      else:
+        logging.info("There was no %s running!" % daemon)
+
+    logging.info("Sleeping for %d seconds" % restart_after)
+    time.sleep(restart_after)
+
+    for daemon in daemons:
+      logging.info("Restarting %s" % daemon);
+      procutils.start_daemon(daemon)
   return do
 
-def pause_daemon(jvm_name, seconds):
+def pause_daemons(jvm_names, seconds):
   """
-  Pause the given daemon for some period of time using SIGSTOP/SIGCONT
+  Pause the given daemons for some period of time using SIGSTOP/SIGCONT
 
-  @param jvm_name: the name of the class to pause: eg DataNode
+  @param jvm_names: the names of the class to pause: eg ["DataNode"]
   @param seconds: the number of seconds to pause for
   """
   def do():
-    pid = procutils.find_jvm(jvm_name)
-    if not pid:
-      logging.warn("No pid found for %s" % jvm_name)
-      return
-    logging.warn("Suspending %s pid %d for %d seconds" % (jvm_name, pid, seconds))
-    os.kill(pid, signal.SIGSTOP)
+    # Stop all daemons, record their pids
+    for jvm_name in jvm_names:
+      pid = procutils.find_jvm(jvm_name)
+      if not pid:
+        logging.warn("No pid found for %s" % jvm_name)
+        continue
+      logging.warn("Suspending %s pid %d for %d seconds" % (jvm_name, pid, seconds))
+      os.kill(pid, signal.SIGSTOP)
+
+    # Pause for prescribed amount of time
     time.sleep(seconds)
-    logging.warn("Resuming %s pid %d" % (jvm_name, pid))
-    os.kill(pid, signal.SIGCONT)
+
+    # Resume them
+    for jvm_name in jvm_names:
+      pid = procutils.find_jvm(jvm_name)
+      if pid:
+        logging.warn("Resuming %s pid %d" % (jvm_name, pid))
+        os.kill(pid, signal.SIGCONT)
   return do
 
-def drop_packets_to_daemon(daemon, seconds):
+def drop_packets_to_daemons(daemons, seconds):
   """
-  Determines which TCP ports the given daemon is listening on, and sets up
+  Determines which TCP ports the given daemons are listening on, and sets up
   an iptables firewall rule to drop all packets to any of those ports
   for a period of time.
 
-  @param daemon: the JVM class name of the daemon
+  @param daemons: the JVM class names of the daemons
   @param seconds: how many seconds to drop packets for
   """
   def do():
-    logging.info("Going to drop packets from %s for %d seconds..." % (daemon, seconds))
-    pid = procutils.find_jvm(daemon)
-    if not pid:
-      logging.warn("Daemon %s not running!" % daemon)
-      return
-    ports = procutils.get_listening_ports(pid)
-    logging.info("%s is listening on ports: %s" % (daemon, repr(ports)))
+    logging.info("Going to drop packets from %s for %d seconds..." %
+                 (repr(daemons), seconds))
 
-    chain = iptables.create_gremlin_chain(ports)
+    # Figure out what ports the daemons are listening on
+    all_ports = []
+    for daemon in daemons:
+      pid = procutils.find_jvm(daemon)
+      if not pid:
+        logging.warn("Daemon %s not running!" % daemon)
+        continue
+      ports = procutils.get_listening_ports(pid)
+      logging.info("%s is listening on ports: %s" % (daemon, repr(ports)))
+      all_ports.extend(ports)
+
+    if not all_ports:
+      logging.warn("No ports found for daemons: %s. Skipping fault." % repr(daemons))
+      return
+
+    # Set up a chain to drop the packets
+    chain = iptables.create_gremlin_chain(all_ports)
     logging.info("Created iptables chain: %s" % chain)
     iptables.add_user_chain_to_input_chain(chain)
 
@@ -94,4 +118,3 @@ def drop_packets_to_daemon(daemon, seconds):
     iptables.delete_user_chain(chain)
     logging.info("Removed gremlin chain %s" % chain)
   return do
-

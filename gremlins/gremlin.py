@@ -28,16 +28,16 @@ active_faults = []
 fault_weights=[
 
 # kill -9s
-  (1, faults.kill_daemon("HRegionServer", signal.SIGKILL, 20)),
-  (1, faults.kill_daemon("DataNode", signal.SIGKILL, 20)),
+  (1, faults.kill_daemons(["HRegionServer"], signal.SIGKILL, 20)),
+  (1, faults.kill_daemons(["DataNode"], signal.SIGKILL, 20)),
 
 # pauses (simulate GC?)
-  (1, faults.pause_daemon("HRegionServer", 60)),
-  (1, faults.pause_daemon("DataNode", 10)),
+  (1, faults.pause_daemons(["HRegionServer"], 60)),
+  (1, faults.pause_daemons(["DataNode"], 10)),
 
 # drop packets (simulate network outage)
-  (1, faults.drop_packets_to_daemon("DataNode", 20)),
-  (1, faults.drop_packets_to_daemon("HRegionServer", 20)),
+  (1, faults.drop_packets_to_daemons(["DataNode"], 20)),
+  (1, faults.drop_packets_to_daemons(["HRegionServer"], 20)),
 
   ]
 
