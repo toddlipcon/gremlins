@@ -36,5 +36,7 @@ profile = [
       (1, faults.drop_packets_to_daemons(["DataNode"], 20)),
       (1, faults.drop_packets_to_daemons(["HRegionServer"], 20)),
 
-      ]))
+      ])),
+  triggers.WebServerTrigger(12321)
   ]
+

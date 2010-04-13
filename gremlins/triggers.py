@@ -19,6 +19,11 @@
 import logging
 import threading
 import time
+from BaseHTTPServer import HTTPServer
+from SimpleHTTPServer import SimpleHTTPRequestHandler
+import cgi
+
+from gremlins import faults, metafaults
 
 class Trigger(object):
   pass
@@ -46,3 +51,47 @@ class Periodic(Trigger):
       self.fault()
       time.sleep(self.period)
     logging.info("Periodic trigger stopping")
+
+
+class WebServerTrigger(Trigger):
+  def __init__(self, port):
+    self.port = port
+    self.server = HTTPServer(('', port), WebServerTrigger.MyHandler)
+
+  def start(self):
+    self.thread = threading.Thread(target=self.server.serve_forever)
+    self.thread.start()
+    time.sleep(60)
+
+  def stop(self):
+    self.server.shutdown()
+
+  def join(self):
+    self.thread.join()
+
+  class MyHandler(SimpleHTTPRequestHandler):
+    def do_POST(self):
+      ctype,pdict = cgi.parse_header(self.headers.getheader('Content-type'))
+      if ctype != 'multipart/form-data':
+        self.sendresponse(500)
+        self.end_headers()
+        self.wfile.write('Must post form with fault= data')
+        return
+
+      query = cgi.parse_multipart(self.rfile, pdict)
+      print query
+
+      try:
+        code = query.get('fault', ["NO FAULT"])[0]
+        print "code: " + code
+        result = eval(code, globals())
+        if not result or not callable(result):
+          raise "Fault must be a callable!"
+        result()
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write("Success! " + repr(result) + "\n")
+      except Exception, e:
+        self.send_response(500)
+        self.end_headers()
+        self.wfile.write('Error: ' + repr(e))
