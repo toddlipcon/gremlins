@@ -17,30 +17,18 @@
 # limitations under the License.
 
 import random
-import time
-from gremlins import faults
-from gremlins.profiles import hbase
-import signal
 import logging
-import sys
 
-logging.basicConfig(level=logging.INFO)
-
-def run_profile(profile):
-  for trigger in profile:
-    trigger.start()
-
-  logging.info("Started profile")
-
-  for trigger in profile:
-    trigger.stop()
-    trigger.join()
-
-
-def main(argv):
-  run_profile(hbase.profile)
-
-if __name__ == "__main__":
-  main(sys.argv)
-
-
+def pick_fault(fault_weights):
+  def do():
+    logging.info("pick_fault triggered")
+    total_weight = sum( wt for wt,fault in fault_weights )
+    pick = random.random() * total_weight
+    accrued = 0
+    for wt, fault in fault_weights:
+      accrued += wt
+      if pick <= accrued:
+        fault()
+        return
+    assert "should not get here, pick=" + pick
+  return do

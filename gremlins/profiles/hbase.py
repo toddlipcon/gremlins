@@ -16,31 +16,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import random
-import time
-from gremlins import faults
-from gremlins.profiles import hbase
 import signal
-import logging
-import sys
 
-logging.basicConfig(level=logging.INFO)
+from gremlins import faults, metafaults, triggers
 
-def run_profile(profile):
-  for trigger in profile:
-    trigger.start()
+profile = [
+  triggers.Periodic(
+    5,
+    metafaults.pick_fault([
+    # kill -9s
+      (1, faults.kill_daemons(["HRegionServer"], signal.SIGKILL, 20)),
+      (1, faults.kill_daemons(["DataNode"], signal.SIGKILL, 20)),
 
-  logging.info("Started profile")
+    # pauses (simulate GC?)
+      (1, faults.pause_daemons(["HRegionServer"], 60)),
+      (1, faults.pause_daemons(["DataNode"], 10)),
 
-  for trigger in profile:
-    trigger.stop()
-    trigger.join()
+    # drop packets (simulate network outage)
+      (1, faults.drop_packets_to_daemons(["DataNode"], 20)),
+      (1, faults.drop_packets_to_daemons(["HRegionServer"], 20)),
 
-
-def main(argv):
-  run_profile(hbase.profile)
-
-if __name__ == "__main__":
-  main(sys.argv)
-
-
+      ]))
+  ]

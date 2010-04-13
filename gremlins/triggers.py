@@ -16,31 +16,33 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import random
-import time
-from gremlins import faults
-from gremlins.profiles import hbase
-import signal
 import logging
-import sys
+import threading
+import time
 
-logging.basicConfig(level=logging.INFO)
+class Trigger(object):
+  pass
 
-def run_profile(profile):
-  for trigger in profile:
-    trigger.start()
+class Periodic(Trigger):
+  def __init__(self, period, fault):
+    self.period = period
+    self.fault = fault
+    self.thread = threading.Thread(target=self._thread_body)
+    self.should_stop = False
 
-  logging.info("Started profile")
+  def start(self):
+    self.thread.start()
 
-  for trigger in profile:
-    trigger.stop()
-    trigger.join()
+  def stop(self):
+    self.should_stop = True
 
+  def join(self):
+    self.thread.join()
 
-def main(argv):
-  run_profile(hbase.profile)
-
-if __name__ == "__main__":
-  main(sys.argv)
-
-
+  def _thread_body(self):
+    logging.info("Periodic trigger starting")
+    while not self.should_stop:
+      logging.info("Periodic triggering fault " + repr(self.fault))
+      self.fault()
+      time.sleep(self.period)
+    logging.info("Periodic trigger stopping")
