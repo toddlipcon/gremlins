@@ -33,6 +33,7 @@ class Periodic(Trigger):
     self.period = period
     self.fault = fault
     self.thread = threading.Thread(target=self._thread_body)
+    self.thread.setDaemon(True)
     self.should_stop = False
 
   def start(self):
@@ -60,6 +61,7 @@ class WebServerTrigger(Trigger):
 
   def start(self):
     self.thread = threading.Thread(target=self.server.serve_forever)
+    self.thread.setDaemon(True)
     self.thread.start()
     time.sleep(60)
 
