@@ -1,5 +1,19 @@
 Gremlins is a python program/framework which assists in fault testing distributed systems.
 
+== Overview ==
+
+Gremlins is a fault injector - it is an evil program that sits on a machine and does
+nasty things to other programs on that machine (or the machine overall).
+
+Its primary purpose is for black-box long-lived testing of a distributed system, as it
+does not make any effort to provide concepts like "test cases" or code instrumentation.
+The idea is not to trigger specific error cases, but to simulate generally faulty hardware
+and networking so that a larger class of problems can be found on a small test cluster.
+
+The hope is that, if a fault tolerant system can make progress without corruption or
+unrecoverable errors on a 5-node cluster full of gremlins, it will also be free of such
+errors on a 500-node cluster where errors may occur every day by natural causes.
+
 == Setup ==
 
 The very simplest way to run gremlins is to just set your python path:
