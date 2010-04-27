@@ -1,6 +1,7 @@
 Gremlins is a python program/framework which assists in fault testing distributed systems.
 
-== Overview ==
+Overview
+=========
 
 Gremlins is a fault injector - it is an evil program that sits on a machine and does
 nasty things to other programs on that machine (or the machine overall).
@@ -14,7 +15,8 @@ The hope is that, if a fault tolerant system can make progress without corruptio
 unrecoverable errors on a 5-node cluster full of gremlins, it will also be free of such
 errors on a 500-node cluster where errors may occur every day by natural causes.
 
-== Setup ==
+Setup
+=====
 
 The very simplest way to run gremlins is to just set your python path:
 
@@ -25,11 +27,13 @@ after running python setup.py develop
 
 $ gremlins
 
-== Concepts ==
+Concepts
+========
 
 Gremlins is built around a few key concepts: faults, triggers, and profiles.
 
-=== Faults ===
+Faults
+------
 
 A fault is the most specific unit of abstraction - it is simply a thing that can go wrong.
 One example fault is "kill -9 the DataNode JVM, wait 60 seconds, then start it back up".
@@ -46,7 +50,8 @@ other faults. Currently the only example of a metafault is gremlins.metafaults.p
 which takes a list of (weight, fault) pairs, and picks one of the subfaults according to the
 provided weights.
 
-=== Triggers ===
+Triggers
+--------
 
 A trigger is a way of running faults. The simplest trigger (and the only one that really works
 well at the moment) is gremlins.triggers.Periodic. This trigger is constructed with an interval
@@ -60,14 +65,16 @@ from a central location.
 Future trigger ideas include the ability to watch a log for a given line before triggering a fault,
 etc.
 
-=== Profiles ===
+Profiles
+--------
 
 A profile currently doesn't have a type, but is just a normal python list of triggers. When
 running gremlins, one can provide a profile, and each of the triggers will be started.
 This concept allows one to start both a webserver trigger and a periodic trigger from a
 single invocation.
 
-== Running gremlins ==
+Running gremlins
+================
 
 Gremlins can be run in two different modes. In the first mode, the user specifies a list of faults.
 These faults are executed immediately, and then gremlins exists. In the second mode, the user
