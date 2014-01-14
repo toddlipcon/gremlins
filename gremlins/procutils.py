@@ -23,12 +23,16 @@ import logging
 
 HBASE_HOME=os.getenv("HBASE_HOME", "/home/todd/monster-cluster/hbase")
 HADOOP_HOME=os.getenv("HADOOP_HOME", "/home/todd/monster-cluster/hadoop-0.20.1+169.66")
+ACCUMULO_HOME=os.getenv("ACCUMULO_HOME", "/usr/lib/accumulo")
+ACCUMULO_USER =os.getenv("ACCUMULO_USER", "accumulo")
+SUDO=os.getenv("SUDO", "sudo")
 LSOF=os.getenv("LSOF", "lsof")
 JPS=os.getenv("JPS", "jps")
 
 START_COMMANDS = {
   'HRegionServer': [HBASE_HOME + "/bin/hbase-daemon.sh", "start", "regionserver"],
   'DataNode': [HADOOP_HOME + "/bin/hadoop-daemon.sh", "start", "datanode"],
+  'Accumulo-All': [SUDO, "-n",  "-u", ACCUMULO_USER, "-i", ACCUMULO_HOME + "/bin/start-here.sh"],
 }
 
 
