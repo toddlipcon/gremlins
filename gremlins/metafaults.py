@@ -32,3 +32,11 @@ def pick_fault(fault_weights):
         return
     assert "should not get here, pick=" + pick
   return do
+
+def maybe_fault(likelyhood, fault):
+  def do():
+    logging.info("maybe_fault triggered, %3.2f likelyhood" % likelyhood)
+    if random.random() <= likelyhood:
+      fault()
+    return
+  return do
