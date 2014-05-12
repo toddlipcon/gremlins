@@ -16,27 +16,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import random
-import logging
+import os
+from gremlins import procutils, iptables
 
-def pick_fault(fault_weights):
-  def do():
-    logging.info("pick_fault triggered")
-    total_weight = sum( wt for wt,fault in fault_weights )
-    pick = random.random() * total_weight
-    accrued = 0
-    for wt, fault in fault_weights:
-      accrued += wt
-      if pick <= accrued:
-        fault()
-        return
-    assert "should not get here, pick=" + pick
-  return do
+LASTCMD = "/usr/bin/last"
 
-def maybe_fault(likelyhood, fault):
-  def do():
-    logging.info("maybe_fault triggered, %3.2f likelyhood" % likelyhood)
-    if random.random() <= likelyhood:
-      fault()
-    return
-  return do
+def guess_remote_host():
+  """
+  Attempt to find the host our current user last logged in from.
+  """
+  user = os.environ.get("USER")
+  sudo_user = os.environ.get("SUDO_USER")
+  if sudo_user:
+    user = sudo_user
+  if user:
+    last = procutils.run([LASTCMD, "-a", user, "-n", "1"]).splitlines()[0]
+    return last.rpartition(' ')[2]
+  else:
+    return None

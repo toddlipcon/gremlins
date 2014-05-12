@@ -118,3 +118,41 @@ def drop_packets_to_daemons(daemons, seconds):
     iptables.delete_user_chain(chain)
     logging.info("Removed gremlin chain %s" % chain)
   return do
+
+def fail_network(bastion_host, seconds, restart_daemons=None, use_flush=False):
+  """
+  Cuts off all network traffic for this host, save ssh to/from a given bastion host,
+  for a period of time.
+
+  @param bastion_host: a host or ip to allow ssh with, just in case
+  @param seconds: how many seconds to drop packets for
+  @param restart_daemons: optional list of daemon processes to restart after network is restored
+  @param use_flush: optional param to issue an iptables flush rather than manually remove chains from INPUT/OUTPUT
+  """
+  def do():
+    logging.info("Going to drop all networking (save ssh with %s) for %d seconds..." %
+                 (bastion_host, seconds))
+    # TODO check connectivity, or atleast DNS resolution, for bastion_host
+    chains = iptables.create_gremlin_network_failure(bastion_host)
+    logging.info("Created iptables chains: %s" % repr(chains))
+    iptables.add_user_chain_to_input_chain(chains[0])
+    iptables.add_user_chain_to_output_chain(chains[1])
+
+    logging.info("Gremlin chains %s installed, sleeping %d seconds" % (repr(chains), seconds))
+    time.sleep(seconds)
+
+    if use_flush:
+      logging.info("Using flush to remove gremlin chains")
+      iptables.flush()
+    else:
+      logging.info("Removing gremlin chains %s" % repr(chains))
+      iptables.remove_user_chain_from_input_chain(chains[0])
+      iptables.remove_user_chain_from_output_chain(chains[1])
+    iptables.delete_user_chain(chains[0])
+    iptables.delete_user_chain(chains[1])
+    logging.info("Removed gremlin chains %s" % repr(chains))
+    if restart_daemons:
+      logging.info("Restarting daemons: %s", repr(restart_daemons))
+      for daemon in restart_daemons:
+        procutils.start_daemon(daemon)
+  return do
